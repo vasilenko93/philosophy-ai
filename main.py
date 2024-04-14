@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import json
 from typing import Any, Dict
 import dill
@@ -27,18 +28,19 @@ def main ():
 
     questionsToAsk.append(questionToAsk)
 
-    counter: int = 3
+    counter: int = 4
     while counter >= 0 :
         callOpenAiForAllQuestions(client)
         counter = counter - 1
 
-    writeOutputFile()
+    writeOutputFile(questionToAsk)
     
 
 def callOpenAiForAllQuestions(client: OpenAI) :
     additionalQuestions : list = []
     for question in questionsToAsk:
         openAiResponse = callOpenAi(client, question)
+        # Use hardocded response for debugging without wasting credits
         # openAiResponse = loadStoredResponse("chat_completion.pickle")
         questionToAnswerMap[question] = openAiResponse['answer']
         questionsToAsk.remove(question)
@@ -53,11 +55,19 @@ def processOpenAiResponse(openAiMessage, additionalQuestions: list) :
 
 
 def callOpenAi(client: OpenAI, question :str) -> Any :
+    print("Calling OpenAI with question: " + question)
+    roleSystemContent = """
+        You are a philosopher that contemplates on questions by answering 
+        the question asked and asking additional questions about the initial 
+        question, you respond with a JSON object containing your answer 
+        to the question and a string array of follow up questions. Always respond with a
+        field 'answer' and a field 'follow_up_questions'
+    """
     chat_completion : ChatCompletion = client.chat.completions.create(
         messages=[
             {
                 "role": "system",
-                "content": "You are a philosopher that contemplates on questions by answering the question asked and asking additional questions about the initial question, you respond with a JSON object containing your answer to the question and a string array of follow up questions."
+                "content": roleSystemContent.strip()
             },
             {
                 "role": "user",
@@ -79,8 +89,16 @@ def copyListAtoB(fromList: list, toList: list):
     for item in fromList:
         toList.append(item)
 
-def writeOutputFile(): 
-    f = open("aismart.md", "w")
+def writeOutputFile(questionToAsk: str): 
+    fileName = questionToAsk.strip()
+    fileName = re.sub(' +', ' ', fileName)
+    fileName = fileName.replace(" ", "_")
+    fileName = fileName.replace("?", "")
+    fileName = "output/" + fileName + ".md"
+    dirname = os.path.dirname(fileName)
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+    f = open(fileName, "w")
     f.write("Look at this amazing content written by AI.")
     f.write("\n\n")
     for item in questionToAnswerMap:
