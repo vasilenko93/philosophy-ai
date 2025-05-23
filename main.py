@@ -74,7 +74,7 @@ def callOpenAi(client: OpenAI, question :str) -> Any :
                 "content": question
             }
         ],
-        model="gpt-3.5-turbo",
+        model="gpt-4.1-mini",
         response_format={"type": "json_object"},
     )
 
